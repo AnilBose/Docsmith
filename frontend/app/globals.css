@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-chrome-950 text-chrome-200 font-ui text-base antialiased;
+  }
+
+  /* Slim, Acrobat-like scrollbars on the workspace panes. */
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-chrome-700 rounded-full border-[3px] border-solid border-transparent bg-clip-content;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-chrome-600;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent-ring;
+  }
+}
+
+@layer components {
+  .tool-btn {
+    @apply inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded px-2
+           text-chrome-200 transition-colors select-none
+           hover:bg-chrome-750 active:bg-chrome-700
+           disabled:pointer-events-none disabled:opacity-35;
+  }
+
+  .tool-btn-active {
+    @apply bg-accent-soft text-white shadow-[inset_0_0_0_1px_theme(colors.accent.DEFAULT)];
+  }
+
+  .ribbon-btn {
+    @apply flex h-[58px] w-[68px] flex-col items-center justify-center gap-1 rounded
+           px-1 text-2xs leading-tight text-chrome-200 transition-colors
+           hover:bg-chrome-750 active:bg-chrome-700
+           disabled:pointer-events-none disabled:opacity-35;
+  }
+
+  .ribbon-btn-active {
+    @apply bg-accent-soft text-white shadow-[inset_0_0_0_1px_theme(colors.accent.DEFAULT)];
+  }
+
+  .field {
+    @apply h-7 rounded border border-chrome-700 bg-chrome-900 px-2 text-sm text-chrome-100
+           transition-colors placeholder:text-chrome-500
+           focus:border-accent focus:outline-none;
+  }
+
+  .panel {
+    @apply border-chrome-800 bg-chrome-900;
+  }
+
+  .panel-title {
+    @apply px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-chrome-400;
+  }
+
+  .divider {
+    @apply mx-1 h-6 w-px shrink-0 bg-chrome-700;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-chrome-800 px-2 py-0.5 text-2xs
+           text-chrome-300;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded bg-accent px-3
+           text-sm font-medium text-white transition-colors hover:bg-accent-hover
+           disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-ghost {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded border
+           border-chrome-700 px-3 text-sm text-chrome-200 transition-colors
+           hover:bg-chrome-800 disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-danger {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded bg-danger px-3
+           text-sm font-medium text-white transition-colors hover:brightness-110
+           disabled:pointer-events-none disabled:opacity-40;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Page + overlay chrome
+   -------------------------------------------------------------------------- */
+.page-shadow {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Text runs sit invisibly on top of the rendered canvas as hit targets. The
+   canvas underneath already shows the real glyphs, so the overlay only becomes
+   visible while it is actually being edited. */
+.span-box {
+  position: absolute;
+  color: transparent;
+  cursor: text;
+  transform-origin: 0 0;
+  white-space: pre;
+  border: 1px solid transparent;
+  border-radius: 1px;
+}
+
+.span-box:hover {
+  border-color: rgba(20, 115, 230, 0.55);
+  background: rgba(20, 115, 230, 0.08);
+}
+
+.span-box.is-selected {
+  border-color: #1473e6;
+  background: rgba(20, 115, 230, 0.14);
+}
+
+.span-box.is-editing {
+  color: inherit;
+  white-space: pre-wrap;
+  border-color: #1473e6;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(20, 115, 230, 0.35);
+  cursor: text;
+  z-index: 30;
+  overflow: visible;
+}
+
+.image-box {
+  position: absolute;
+  border: 1px solid transparent;
+  cursor: move;
+}
+
+.image-box:hover {
+  border-color: rgba(20, 115, 230, 0.6);
+  background: rgba(20, 115, 230, 0.06);
+}
+
+.image-box.is-selected {
+  border-color: #1473e6;
+  background: rgba(20, 115, 230, 0.05);
+}
+
+.handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 1.5px solid #1473e6;
+  border-radius: 1px;
+  z-index: 5;
+}
+
+.search-hit {
+  position: absolute;
+  background: rgba(255, 213, 79, 0.42);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.search-hit-active {
+  background: rgba(255, 145, 0, 0.55);
+  box-shadow: 0 0 0 1.5px rgba(255, 145, 0, 0.9);
+}
+
+.redact-preview {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid #e34850;
+  pointer-events: none;
+}
+
+.spell-underline {
+  position: absolute;
+  border-bottom: 2px wavy #e34850;
+  pointer-events: none;
+}
+
+/* Reading modes ---------------------------------------------------------- */
+.reading-night canvas {
+  filter: invert(0.92) hue-rotate(180deg) contrast(0.92);
+}
+
+.reading-sepia canvas {
+  filter: sepia(0.35) saturate(1.05) brightness(0.98);
+}
+
+[contenteditable] {
+  outline: none;
+}

@@ -1,0 +1,31 @@
+# ---- Core web layer -------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+
+# ---- PDF engines (all OSI-licensed, all run fully offline) -----------------
+# PyMuPDF  : AGPL-3.0 -- lossless text/image/redaction engine
+# pikepdf   : MPL-2.0  -- qpdf bindings, encryption + permissions
+# pypdf     : BSD-3    -- pure-python fallback for page algebra
+PyMuPDF==1.25.1
+pikepdf==9.4.2
+pypdf==5.1.0
+
+# ---- Raster / image pipeline ----------------------------------------------
+Pillow==11.0.0
+
+# ---- Conversion -----------------------------------------------------------
+pdf2docx==0.5.8            # PDF -> DOCX   (GPL-3.0)
+pdfplumber==0.11.4         # PDF -> XLSX / CSV table extraction (MIT)
+openpyxl==3.1.5            # XLSX writer (MIT)
+python-pptx==1.0.2         # PDF -> PPTX (MIT)
+python-docx==1.1.2         # DOCX inspection (MIT)
+reportlab==4.2.5           # TXT -> PDF (BSD)
+# weasyprint==63.1         # OPTIONAL. Full CSS for HTML -> PDF, but needs the
+                           # GTK/Pango native stack. Without it the built-in
+                           # PyMuPDF Story renderer handles HTML -> PDF, so
+                           # install this only if you need advanced CSS.
+
+# ---- Language tools -------------------------------------------------------
+pyspellchecker==0.8.1      # offline dictionary spell-check (MIT)

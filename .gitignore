@@ -1,0 +1,21 @@
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/public/pdf.worker.min.mjs
+
+# Test artefacts
+frontend/scripts/sample.pdf
+frontend/scripts/ui-smoke.png
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
