@@ -6,12 +6,14 @@ import type {
   FontFamily,
   ImageObject,
   PageLayout,
+  ParagraphEditResult,
   PermissionFlags,
   Rect,
   RedactionFinding,
   SearchMatch,
   SpellIssue,
   TextEdit,
+  TextRun,
 } from "./types";
 
 /** Same-origin: next.config.mjs rewrites /api to the local Python service. */
@@ -116,6 +118,8 @@ export const api = {
     downloadFrom(`/api/documents/${id}/download`, name),
 
   fonts: (id: string) => request<FontFamily[]>(`/api/documents/${id}/fonts`),
+  fontFileUrl: (id: string, fontId: string) =>
+    `${BASE}/api/documents/${id}/fonts/${encodeURIComponent(fontId)}/file`,
   security: (id: string) => request<any>(`/api/documents/${id}/security`),
   sanitize: (id: string) => request<any>(`/api/documents/${id}/sanitize`, { method: "POST" }),
   setMetadata: (id: string, meta: Record<string, string>) =>
@@ -133,6 +137,20 @@ export const api = {
       `/api/documents/${id}/text/edit`,
       json({ edits }),
     ),
+
+  /** Rewrite a whole paragraph; the content after it reflows across pages. */
+  editParagraph: (
+    id: string,
+    payload: {
+      page: number;
+      paragraphId: string;
+      version?: number;
+      items: TextRun[][];
+      align?: "left" | "center" | "right" | "justify";
+      reflow?: boolean;
+      lift?: number;
+    },
+  ) => request<ParagraphEditResult>(`/api/documents/${id}/text/paragraph`, json(payload)),
 
   search: (
     id: string,
@@ -348,10 +366,11 @@ export const api = {
     });
   },
 
-  async htmlToPdf(html: string): Promise<{ document: DocumentSummary }> {
+  async htmlToPdf(html: string, filename?: string): Promise<{ document: DocumentSummary }> {
     const form = new FormData();
     form.append("html", html);
     form.append("open_after", "true");
+    if (filename) form.append("filename", filename);
     return request<{ document: DocumentSummary }>("/api/convert/html-to-pdf", {
       method: "POST",
       body: form,
@@ -372,6 +391,22 @@ export const api = {
     const query = new URLSearchParams({ format, dpi: String(dpi) });
     if (pages) query.set("pages", pages);
     return downloadFrom(`/api/convert/${id}/export?${query}`, `${name}.${format}`);
+  },
+
+  /** A conversion's bytes, for opening in the Word or spreadsheet view instead of downloading. */
+  async exportBytes(id: string, format: string): Promise<ArrayBuffer> {
+    const response = await fetch(`${BASE}/api/convert/${id}/export?${new URLSearchParams({ format })}`);
+    if (!response.ok) {
+      let detail = `Conversion failed (${response.status})`;
+      try {
+        const body = await response.json();
+        if (body?.detail) detail = body.detail;
+      } catch {
+        /* streamed binary error */
+      }
+      throw new ApiError(detail, response.status);
+    }
+    return response.arrayBuffer();
   },
 
   /* ------------------------------------------------------------- security */

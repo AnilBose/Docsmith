@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import re
 from urllib.parse import quote
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -70,14 +71,22 @@ async def to_pdf(files: list[UploadFile] = File(...), open_after: bool = Form(de
 
 
 @router.post("/html-to-pdf")
-async def html_to_pdf(html: str = Form(...), open_after: bool = Form(default=True)):
+async def html_to_pdf(
+    html: str = Form(...),
+    open_after: bool = Form(default=True),
+    filename: str = Form(default="page.pdf"),
+):
+    # The Word and spreadsheet views convert through here, under their own name.
+    name = re.sub(r'[\\/:*?"<>|\r\n]+', "_", filename).strip() or "page.pdf"
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
     data = _guard(lambda: convsvc.html_to_pdf(html))
     if open_after:
-        return {"document": summarize(_guard(lambda: store.open(data, "page.pdf")))}
+        return {"document": summarize(_guard(lambda: store.open(data, name)))}
     return StreamingResponse(
         io.BytesIO(data),
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=\"page.pdf\""},
+        headers={"Content-Disposition": 'attachment; filename="{0}"'.format(name)},
     )
 
 

@@ -152,6 +152,73 @@
   overflow: visible;
 }
 
+/* Paragraphs: transparent hit boxes, and the rich-text editor that replaces
+   one while it is being edited. The editor is laid out in PDF points and
+   zoomed with a transform, so its text wraps exactly like the page does. */
+.para-box {
+  position: absolute;
+  cursor: text;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.para-box:hover {
+  border-color: rgba(20, 115, 230, 0.55);
+  background: rgba(20, 115, 230, 0.06);
+}
+
+.para-box.is-selected {
+  border-color: #1473e6;
+  background: rgba(20, 115, 230, 0.1);
+}
+
+.para-editor-frame {
+  position: absolute;
+  transform-origin: 0 0;
+  z-index: 30;
+}
+
+.para-editor {
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  cursor: text;
+  box-shadow:
+    0 0 0 0.75px #1473e6,
+    0 0 0 3px rgba(20, 115, 230, 0.25);
+}
+
+.para-editor > div {
+  position: relative;
+}
+
+.para-editor > div + div {
+  margin-top: var(--item-gap, 0px);
+}
+
+/* Items created with Enter get the list's bullet, where the bullets sit. */
+.para-editor.has-marker > div + div::before,
+.para-editor.has-marker.is-lifted > div:first-child::before {
+  content: var(--marker);
+  position: absolute;
+  left: var(--marker-left);
+  top: 0;
+  font-size: var(--marker-size, inherit);
+  text-indent: 0;
+}
+
+.para-editor-hint {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  white-space: nowrap;
+  border-radius: 3px;
+  background: #1f2937;
+  color: #e5e7eb;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+}
+
 .image-box {
   position: absolute;
   border: 1px solid transparent;

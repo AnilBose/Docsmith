@@ -357,10 +357,34 @@ def to_html(session: DocumentSession, pages: Sequence[int] | None = None) -> byt
     return document.encode("utf-8")
 
 
+def _patch_pdf2docx() -> None:
+    """Make pdf2docx read text colours with an alpha byte.
+
+    PyMuPDF reports some colours as signed 32-bit ARGB (0xff171717 arrives as
+    -15263977); pdf2docx turns them into hex digits with ``hex()``, fails on
+    the minus sign and silently drops the whole page. The low 24 bits are the
+    colour itself.
+    """
+    from pdf2docx.common import share
+    from pdf2docx.text import TextSpan
+
+    if getattr(TextSpan.rgb_component, "_pdfe", False):
+        return
+    original = share.rgb_component
+
+    def rgb_component(srgb: int):
+        return original(int(srgb) & 0xFFFFFF)
+
+    rgb_component._pdfe = True  # type: ignore[attr-defined]
+    share.rgb_component = rgb_component
+    TextSpan.rgb_component = rgb_component
+
+
 def to_docx(session: DocumentSession, pages: Sequence[int] | None = None) -> bytes:
     """PDF -> Word using pdf2docx, which rebuilds paragraphs, styles and tables."""
     try:
         from pdf2docx import Converter
+        _patch_pdf2docx()
     except Exception as exc:
         raise DocumentError("pdf2docx is not installed: {0}".format(exc)) from exc
 

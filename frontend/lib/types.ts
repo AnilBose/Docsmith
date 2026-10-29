@@ -45,6 +45,41 @@ export interface TextSpan {
   charEnd: number;
 }
 
+/** A run of uniformly styled text inside a paragraph. */
+export interface TextRun {
+  text: string;
+  font?: string;
+  fontId?: string;
+  familyId?: string;
+  size?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  /** A single space of exactly this width (a fixed gap in the original layout). */
+  spaceWidth?: number;
+}
+
+export interface Paragraph {
+  id: string;
+  spanIds: string[];
+  bbox: Rect;
+  /** Where the text wraps: left/right edge, first line top, last line bottom. */
+  box: Rect;
+  firstIndent: number;
+  firstBaseline: number;
+  lineHeight: number;
+  lineCount: number;
+  align: "left" | "center" | "right" | "justify";
+  /** Extra space above a new item created with Enter. */
+  itemGap: number;
+  /** How far the paragraph can move up into the empty space above it. */
+  spaceAbove: number;
+  marker: { text: string; bbox: Rect; inline: boolean } | null;
+  runs: TextRun[];
+}
+
 export interface PageLayout {
   page: number;
   width: number;
@@ -53,6 +88,17 @@ export interface PageLayout {
   spans: TextSpan[];
   blocks: { id: string; bbox: Rect; spans: string[] }[];
   text: string;
+  paragraphs?: Paragraph[];
+  background?: string;
+  version?: number;
+}
+
+export interface ParagraphEditResult {
+  applied: number;
+  pagesChanged: number[];
+  pagesAdded: number;
+  warnings: string[];
+  document: DocumentSummary;
 }
 
 export interface TextStyleInput {

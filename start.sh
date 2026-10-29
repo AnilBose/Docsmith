@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the PDF editor on this machine (macOS / Linux).
+# Starts Docsmith on this machine (macOS / Linux).
 #
 #   ./start.sh          production build
 #   ./start.sh --dev    Next.js dev server with hot reload
@@ -79,7 +79,7 @@ UI_PID=$!
 
 cat <<INFO
 
-  PDF editor is running.
+  Docsmith is running.
     Interface : http://127.0.0.1:$UI_PORT
     API docs  : http://127.0.0.1:$API_PORT/api/docs
 

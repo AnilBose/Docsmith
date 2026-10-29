@@ -41,7 +41,7 @@ try {
 
   console.log("[1] Load the app");
   await page.goto(BASE, { waitUntil: "networkidle" });
-  check("title bar rendered", await page.getByText("PDF Editor").first().isVisible());
+  check("title bar rendered", await page.getByText("Docsmith").first().isVisible());
   check(
     "start screen shown",
     await page.getByText("Open a document to begin").isVisible(),
@@ -91,13 +91,14 @@ try {
 
   console.log("\n[5] Text editing");
   await page.getByTitle("Edit Text").first().click();
-  await page.waitForSelector(".span-box", { timeout: 20000 });
-  const spanCount = await page.locator(".span-box").count();
-  check("text overlay built", spanCount >= 5, String(spanCount));
+  await page.waitForSelector(".para-box", { timeout: 20000 });
+  const paragraphCount = await page.locator(".para-box").count();
+  check("text overlay built", paragraphCount >= 3, String(paragraphCount));
 
-  const title = page.locator(".span-box", { hasText: "Quarterly Report" }).first();
+  // Paragraphs come in reading order, so the title is the first one.
+  const title = page.locator('[data-page="0"] .para-box').first();
   await title.click();
-  check("span selects", (await page.locator(".span-box.is-selected").count()) > 0);
+  check("paragraph selects", (await page.locator(".para-box.is-selected").count()) > 0);
   // The inspector must reflect the run's real typography read out of the PDF.
   const sizeInput = page.locator('aside input[type="number"]').first();
   const shownSize = await sizeInput.inputValue().catch(() => "");
@@ -110,15 +111,16 @@ try {
   check("properties panel shows the colour", /^#[0-9a-f]{6}$/i.test(shownColor), shownColor);
 
   await title.dblclick();
-  await page.waitForSelector(".span-box.is-editing", { timeout: 10000 });
-  check("double-click enters edit mode", true);
+  await page.waitForSelector(".para-editor", { timeout: 10000 });
+  check("double-click opens the paragraph editor", true);
 
   await page.keyboard.press("Control+A");
   await page.keyboard.type("Browser Edited Title");
-  await page.keyboard.press("Enter");
+  // Enter starts a new paragraph, as in a word processor; Ctrl+Enter applies.
+  await page.keyboard.press("Control+Enter");
 
   await page.waitForFunction(
-    () => !document.querySelector(".span-box.is-editing"),
+    () => !document.querySelector(".para-editor"),
     { timeout: 20000 },
   );
   await page.waitForTimeout(2500);

@@ -1,5 +1,5 @@
 {
-  "name": "pdf-editor-frontend",
+  "name": "docsmith-frontend",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,23 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@corbe30/fortune-excel": "2.3.5",
+    "@fortune-sheet/react": "1.0.4",
+    "@tiptap/core": "3.32.1",
+    "@tiptap/extension-highlight": "3.32.1",
+    "@tiptap/extension-image": "3.32.1",
+    "@tiptap/extension-table": "3.32.1",
+    "@tiptap/extension-text-align": "3.32.1",
+    "@tiptap/extension-text-style": "3.32.1",
+    "@tiptap/pm": "3.32.1",
+    "@tiptap/react": "3.32.1",
+    "@tiptap/starter-kit": "3.32.1",
+    "docx": "9.15.0",
+    "docx-preview": "0.4.1",
+    "exceljs": "4.4.0",
+    "mammoth": "1.13.0",
     "next": "14.2.18",
+    "papaparse": "5.7.0",
     "pdfjs-dist": "4.8.69",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -18,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "20.17.9",
+    "@types/papaparse": "5.5.2",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "autoprefixer": "10.4.20",

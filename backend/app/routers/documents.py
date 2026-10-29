@@ -149,6 +149,25 @@ def document_fonts(doc_id: str):
     return fonts.available_families(get_session(doc_id))
 
 
+@router.get("/{doc_id}/fonts/{font_id}/file")
+def document_font_file(doc_id: str, font_id: str):
+    """An embedded font program, so the paragraph editor previews in the real face."""
+    session = get_session(doc_id)
+    with session.lock:
+        library = fonts.build_library(session)
+        found = library.font_file(font_id)
+        coverage = library.unicode_range(font_id) if found else None
+    if found is None:
+        raise HTTPException(status_code=404, detail="No embedded font with that id.")
+    data, media_type = found
+    headers = {"Cache-Control": "private, max-age=3600"}
+    if coverage:
+        # Subsets often map characters to empty glyphs; the browser must fall
+        # back for those instead of drawing nothing.
+        headers["X-Unicode-Range"] = coverage
+    return Response(content=data, media_type=media_type, headers=headers)
+
+
 @router.get("/{doc_id}/security")
 def document_security(doc_id: str):
     return secsvc.describe(get_session(doc_id))

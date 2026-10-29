@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useEditor } from "@/lib/store";
 import type { ReadingMode, ViewMode } from "@/lib/types";
@@ -26,6 +27,27 @@ export default function Toolbar() {
   const setPropertiesOpen = useEditor((s) => s.setPropertiesOpen);
   const undo = useEditor((s) => s.undo);
   const redo = useEditor((s) => s.redo);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
+
+  // Track the browser's own state so leaving with Esc keeps the button in sync.
+  useEffect(() => {
+    setCanFullscreen(document.fullscreenEnabled);
+    const sync = () => setFullscreen(document.fullscreenElement !== null);
+    sync();
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => {
+        /* the browser refused (e.g. not triggered by a click); nothing to do */
+      });
+    }
+  }
 
   function stepZoom(direction: 1 | -1) {
     const index = ZOOM_STEPS.findIndex((step) => step > zoom + 1e-6);
@@ -143,6 +165,17 @@ export default function Toolbar() {
       >
         <Icon.FitPage size={16} />
       </button>
+      {canFullscreen && (
+        <button
+          type="button"
+          className={`tool-btn ${fullscreen ? "tool-btn-active" : ""}`}
+          onClick={toggleFullscreen}
+          title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
+          aria-pressed={fullscreen}
+        >
+          {fullscreen ? <Icon.ExitFullscreen size={16} /> : <Icon.Fullscreen size={16} />}
+        </button>
+      )}
 
       <span className="divider" />
 

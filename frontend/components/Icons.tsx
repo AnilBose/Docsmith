@@ -146,6 +146,16 @@ export const Icon = {
       <path d="m6 9-3 3 3 3M18 9l3 3-3 3" />
     </Svg>
   ),
+  Fullscreen: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />
+    </Svg>
+  ),
+  ExitFullscreen: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M9 4v4a1 1 0 0 1-1 1H4M20 9h-4a1 1 0 0 1-1-1V4M15 20v-4a1 1 0 0 1 1-1h4M4 15h4a1 1 0 0 1 1 1v4" />
+    </Svg>
+  ),
   Rotate: (p: IconProps) => (
     <Svg {...p}>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />

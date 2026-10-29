@@ -1,4 +1,4 @@
-# Starts the PDF editor on this machine.
+# Starts Docsmith on this machine.
 #
 #   .\start.ps1            production build, opens the browser
 #   .\start.ps1 -Dev       Next.js dev server with hot reload
@@ -122,7 +122,7 @@ if (-not $NoBrowser) {
 }
 
 Write-Host ""
-Write-Host "  PDF editor is running." -ForegroundColor Green
+Write-Host "  Docsmith is running." -ForegroundColor Green
 Write-Host "    Interface : http://127.0.0.1:$UiPort"
 Write-Host "    API docs  : http://127.0.0.1:$ApiPort/api/docs"
 Write-Host ""

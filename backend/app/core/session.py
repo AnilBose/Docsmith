@@ -92,6 +92,19 @@ class DocumentSession:
             self._undo.pop(0)
         self._redo.clear()
 
+    def reload(self) -> None:
+        """Reopen the document from its own bytes, dropping MuPDF's page caches.
+
+        Object numbers survive (``serialize`` never garbage-collects), so ids
+        the client holds stay valid. Also counts as a change for the client.
+        """
+        self._swap_to(self.serialize())
+
+    def rollback(self) -> None:
+        """Abandon a half-finished mutation by restoring the last checkpoint."""
+        if self._undo:
+            self._swap_to(self._undo.pop())
+
     def _swap_to(self, data: bytes) -> None:
         new_doc = fitz.open(stream=data, filetype="pdf")
         try:

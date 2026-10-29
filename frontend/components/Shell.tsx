@@ -1,9 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { API_PORT } from "@/lib/config";
+import { officeKindFor, useOffice, type OfficeFile } from "@/lib/office";
 import { useEditor } from "@/lib/store";
+import type { DocumentSummary } from "@/lib/types";
 import DialogHost from "./dialogs/DialogHost";
 import { Icon } from "./Icons";
 import PropertiesPanel from "./PropertiesPanel";
@@ -11,6 +14,25 @@ import Ribbon from "./Ribbon";
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Viewer from "./Viewer";
+
+// The office editors are large and need the browser; load them on first use.
+const OfficeLoading = () => <div className="grid flex-1 place-items-center text-2xs text-chrome-400">Loading editor…</div>;
+const SpreadsheetView = dynamic(() => import("./office/SpreadsheetView"), { ssr: false, loading: OfficeLoading });
+const DocumentView = dynamic(() => import("./office/DocumentView"), { ssr: false, loading: OfficeLoading });
+
+/** Show a PDF the server just made (from a Word or spreadsheet view) in the PDF editor. */
+async function showPdf(document: DocumentSummary) {
+  useOffice.getState().activate(null);
+  useEditor.setState((s) => ({
+    doc: document,
+    openDocs: [...s.openDocs.filter((d) => d.id !== document.id), document],
+    currentPage: 0,
+    layouts: {},
+    images: {},
+  }));
+  const fonts = await api.fonts(document.id).catch(() => []);
+  useEditor.setState({ fonts });
+}
 
 export default function Shell() {
   return (
@@ -35,6 +57,9 @@ function Workspace() {
   const currentPage = useEditor((s) => s.currentPage);
   const setZoomMode = useEditor((s) => s.setZoomMode);
   const setZoom = useEditor((s) => s.setZoom);
+  const officeFiles = useOffice((s) => s.files);
+  const officeActiveId = useOffice((s) => s.activeId);
+  const officeActive = officeActiveId !== null;
 
   const [dragging, setDragging] = useState(false);
   const [pending, setPending] = useState<File | null>(null);
@@ -49,19 +74,18 @@ function Workspace() {
       if (!list.length) return;
       const file = list[0];
       try {
-        if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        const kind = officeKindFor(file.name);
+        if (kind) {
+          // Word, Excel and CSV open in their own editors, in the browser.
+          for (const entry of list.filter((f) => officeKindFor(f.name))) {
+            useOffice.getState().open(entry.name, await entry.arrayBuffer());
+          }
+        } else if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+          useOffice.getState().activate(null);
           await openFile(file);
         } else {
           const result = await api.convertToPdf(list);
-          useEditor.setState((s) => ({
-            doc: result.document,
-            openDocs: [...s.openDocs, result.document],
-            currentPage: 0,
-            layouts: {},
-            images: {},
-          }));
-          const fonts = await api.fonts(result.document.id).catch(() => []);
-          useEditor.setState({ fonts });
+          await showPdf(result.document);
         }
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
@@ -87,6 +111,11 @@ function Workspace() {
       setPasswordError("That password did not work. Try again.");
     }
   }
+
+  // A PDF that just opened (from any dialog or conversion) should be visible.
+  useEffect(() => {
+    if (doc?.id) useOffice.getState().activate(null);
+  }, [doc?.id]);
 
   /* ----------------------------------------------------------- capabilities */
   useEffect(() => {
@@ -114,6 +143,14 @@ function Workspace() {
           target.isContentEditable);
 
       const mod = event.ctrlKey || event.metaKey;
+      if (useOffice.getState().activeId !== null) {
+        // A Word or spreadsheet tab handles its own keys; only Open stays global.
+        if (mod && event.key.toLowerCase() === "o") {
+          event.preventDefault();
+          fileInput.current?.click();
+        }
+        return;
+      }
       if (mod && event.key.toLowerCase() === "z" && !event.shiftKey) {
         if (typing) return;
         event.preventDefault();
@@ -174,28 +211,49 @@ function Workspace() {
     >
       <TitleBar
         onOpen={() => fileInput.current?.click()}
-        openDocs={openDocs}
-        activeId={doc?.id ?? null}
-        onSwitch={switchDocument}
-        onClose={(id) => void closeDocument(id)}
+        tabs={[
+          ...openDocs.map((d) => ({ id: d.id, filename: d.filename, kind: "pdf" as const })),
+          ...officeFiles.map((f) => ({ id: f.id, filename: f.filename, kind: f.kind })),
+        ]}
+        activeId={officeActiveId ?? doc?.id ?? null}
+        onSwitch={(id) => {
+          if (officeFiles.some((f) => f.id === id)) {
+            useOffice.getState().activate(id);
+          } else {
+            useOffice.getState().activate(null);
+            switchDocument(id);
+          }
+        }}
+        onClose={(id) => {
+          if (officeFiles.some((f) => f.id === id)) useOffice.getState().close(id);
+          else void closeDocument(id);
+        }}
       />
-      <Ribbon />
-      <Toolbar />
 
-      <div className="flex min-h-0 flex-1">
-        <Sidebar />
-        {doc ? <Viewer /> : <StartScreen onOpen={() => fileInput.current?.click()} />}
-        <PropertiesPanel />
+      {/* PDF workspace; kept mounted (hidden) while a Word or spreadsheet tab is shown. */}
+      <div className={officeActive ? "hidden" : "contents"}>
+        <Ribbon />
+        <Toolbar />
+
+        <div className="flex min-h-0 flex-1">
+          <Sidebar />
+          {doc ? <Viewer /> : <StartScreen onOpen={() => fileInput.current?.click()} />}
+          <PropertiesPanel />
+        </div>
+
+        <StatusBar />
       </div>
 
-      <StatusBar />
+      {officeFiles.map((file) => (
+        <OfficeTab key={file.id} file={file} active={file.id === officeActiveId} />
+      ))}
 
       <input
         id="global-open-input"
         ref={fileInput}
         type="file"
         className="hidden"
-        accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.png,.jpg,.jpeg,.webp,.tif,.tiff,.gif,.bmp,.txt,.md,.html,.htm,.rtf,.odt"
+        accept=".pdf,.docx,.doc,.xlsx,.xlsm,.xls,.csv,.tsv,.pptx,.ppt,.png,.jpg,.jpeg,.webp,.tif,.tiff,.gif,.bmp,.txt,.md,.html,.htm,.rtf,.odt"
         multiple
         onChange={(event) => {
           if (event.target.files) void handleFiles(event.target.files);
@@ -271,15 +329,42 @@ function Workspace() {
 }
 
 /* ========================================================================== */
+/** One Word or spreadsheet file; hidden, not unmounted, while another tab is shown. */
+function OfficeTab({ file, active }: { file: OfficeFile; active: boolean }) {
+  const props = {
+    file,
+    active,
+    notify: (kind: "success" | "error" | "info", message: string) => useEditor.getState().notify(kind, message),
+    onOpenPdf: async (html: string, filename: string) => {
+      await useEditor.getState().run("Converting to PDF", async () => {
+        const result = await api.htmlToPdf(html, filename);
+        await showPdf(result.document);
+        useEditor.getState().notify("success", `Opened ${result.document.filename} in the PDF editor`);
+      });
+    },
+  };
+  return (
+    <div className={active ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+      {file.kind === "sheet" ? <SpreadsheetView {...props} /> : <DocumentView {...props} />}
+    </div>
+  );
+}
+
+const TAB_BADGES: Record<"pdf" | "sheet" | "word", { letter: string; className: string }> = {
+  pdf: { letter: "P", className: "bg-danger" },
+  word: { letter: "W", className: "bg-[#2b579a]" },
+  sheet: { letter: "X", className: "bg-[#217346]" },
+};
+
 function TitleBar({
   onOpen,
-  openDocs,
+  tabs,
   activeId,
   onSwitch,
   onClose,
 }: {
   onOpen: () => void;
-  openDocs: { id: string; filename: string }[];
+  tabs: { id: string; filename: string; kind: "pdf" | "sheet" | "word" }[];
   activeId: string | null;
   onSwitch: (id: string) => void;
   onClose: (id: string) => void;
@@ -288,15 +373,15 @@ function TitleBar({
     <div className="flex h-9 shrink-0 items-center gap-2 border-b border-chrome-800 bg-chrome-950 px-2">
       <div className="flex items-center gap-1.5 pr-1">
         <span className="grid h-5 w-5 place-items-center rounded-sm bg-danger text-[9px] font-bold text-white">
-          P
+          D
         </span>
-        <span className="text-sm font-medium text-chrome-200">PDF Editor</span>
+        <span className="text-sm font-medium text-chrome-200">Docsmith</span>
       </div>
 
       <span className="divider" />
 
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-        {openDocs.map((entry) => (
+        {tabs.map((entry) => (
           <div
             key={entry.id}
             className={`group flex h-7 max-w-[220px] shrink-0 items-center gap-1.5 rounded-t px-2.5 text-2xs transition-colors ${
@@ -305,6 +390,12 @@ function TitleBar({
                 : "text-chrome-400 hover:bg-chrome-900 hover:text-chrome-200"
             }`}
           >
+            <span
+              className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] text-[8px] font-bold text-white ${TAB_BADGES[entry.kind].className}`}
+              aria-hidden
+            >
+              {TAB_BADGES[entry.kind].letter}
+            </span>
             <button
               type="button"
               className="min-w-0 truncate"
@@ -353,13 +444,28 @@ function StartScreen({ onOpen }: { onOpen: () => void }) {
         </div>
         <h1 className="mb-2 text-xl font-semibold text-white">Open a document to begin</h1>
         <p className="mb-6 text-sm leading-relaxed text-chrome-400">
-          Drop a file anywhere in this window, or browse for one. Everything happens on this
-          machine — nothing is uploaded, and the document is held in memory only until you close
-          it.
+          Drop a PDF, Word, Excel or CSV file anywhere in this window, or browse for one. Word and
+          spreadsheet files open in their own editors; PDFs open in the PDF editor.
         </p>
-        <button type="button" className="btn-primary mx-auto" onClick={onOpen}>
-          <Icon.Open size={16} /> Open file
-        </button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button type="button" className="btn-primary" onClick={onOpen}>
+            <Icon.Open size={16} /> Open file
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => useOffice.getState().open("Document.docx", null, "word")}
+          >
+            New Word document
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => useOffice.getState().open("Book1.xlsx", null, "sheet")}
+          >
+            New spreadsheet
+          </button>
+        </div>
 
         <div className="mt-8 grid grid-cols-3 gap-3 text-left">
           {[
@@ -376,7 +482,7 @@ function StartScreen({ onOpen }: { onOpen: () => void }) {
 
         {capabilities && !capabilities.libreOffice && (
           <p className="mt-6 text-[10px] leading-relaxed text-chrome-500">
-            Tip: install LibreOffice to enable Word, Excel and PowerPoint import.
+            Tip: install LibreOffice to also open PowerPoint and older .doc and .xls files.
           </p>
         )}
       </div>
@@ -396,7 +502,7 @@ function StatusBar() {
 
   const hints: Record<string, string> = {
     select: "Click an object to select it",
-    editText: "Click to select a text run · double-click to edit it",
+    editText: "Click a paragraph to select it · double-click to edit it; the text after it reflows",
     addText: "Drag a box on the page, then type the text",
     editImage: "Drag an image to move it · pull a handle to resize",
     addImage: "Drag a box to place an image",

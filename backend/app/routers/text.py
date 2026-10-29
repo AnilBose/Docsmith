@@ -1,11 +1,16 @@
 """Text layout, editing, search/replace, case changes and spell checking."""
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.session import DocumentError
 from app.routers.documents import get_session, summarize
+from app.services import fonts as fontsvc
+from app.services import paragraphs as parasvc
+from app.services import reflow as reflowsvc
 from app.services import spell as spellsvc
 from app.services import text as textsvc
 
@@ -40,6 +45,32 @@ class EditBatch(BaseModel):
     edits: list[EditPayload]
 
 
+class RunPayload(BaseModel):
+    text: str = Field(max_length=20000)
+    font: str | None = None
+    size: float | None = Field(default=None, gt=0, le=400)
+    color: str | None = None
+    bold: bool | None = None
+    italic: bool | None = None
+    underline: bool | None = None
+    strike: bool | None = None
+
+
+class ParagraphPayload(BaseModel):
+    page: int = Field(ge=0)
+    paragraphId: str
+    # The document version the client's layout came from; paragraph ids are
+    # only meaningful for that version.
+    version: int | None = None
+    # One list of runs per paragraph: Enter in the editor starts a new item.
+    items: list[list[RunPayload]] = Field(max_length=500)
+    align: Literal["left", "center", "right", "justify"] | None = None
+    reflow: bool = True
+    # Points to move the paragraph up into the space above it (Backspace at
+    # its start); the server limits it to the space actually there.
+    lift: float = Field(default=0.0, ge=0, le=2000)
+
+
 class SearchPayload(BaseModel):
     query: str
     regex: bool = False
@@ -69,7 +100,46 @@ def _guard(fn):
 @router.get("/layout/{page}")
 def layout(doc_id: str, page: int):
     session = get_session(doc_id)
-    return _guard(lambda: textsvc.serialize_layout(session, page))
+
+    def build():
+        with session.lock:
+            data = textsvc.serialize_layout(session, page)
+            pdf_page = session.doc[page]
+            index = textsvc.build_index(session, page)
+            elements = reflowsvc.page_elements(pdf_page)
+            library = fontsvc.build_library(session)
+            data["paragraphs"] = [
+                {**parasvc.serialize(p, library), "spaceAbove": reflowsvc.liftable(elements, p)}
+                for p in parasvc.build(index, pdf_page)
+            ]
+            data["background"] = reflowsvc.page_background(pdf_page)
+            data["version"] = session.version
+            return data
+
+    return _guard(build)
+
+
+@router.post("/paragraph")
+def edit_paragraph(doc_id: str, payload: ParagraphPayload = Body(...)):
+    """Rewrite a whole paragraph and reflow the content after it."""
+    session = get_session(doc_id)
+    if payload.version is not None and payload.version != session.version:
+        raise HTTPException(
+            status_code=409, detail="The document changed since this page was loaded. Try again."
+        )
+    items = [[run.model_dump(exclude_none=True) for run in item] for item in payload.items]
+    result = _guard(
+        lambda: reflowsvc.edit_paragraph(
+            session,
+            payload.page,
+            payload.paragraphId,
+            items,
+            align=payload.align,
+            reflow=payload.reflow,
+            lift=payload.lift,
+        )
+    )
+    return {**result, "document": summarize(session)}
 
 
 @router.post("/edit")

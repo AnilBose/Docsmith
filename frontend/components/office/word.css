@@ -1,0 +1,308 @@
+/* Word document view. Scoped under .word-view so none of it reaches the PDF
+   editor; the typography mirrors exportHtml.ts and the .docx styles, so the
+   page, the saved file and the PDF agree. */
+
+.word-canvas {
+  background: #e3e3e6;
+}
+
+/* One continuous sheet, sized from the document's page setup (inline). The
+   faint rules every page height show where Word would start a new page. */
+.word-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 25.4mm;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--page-h, 297mm) - 1px),
+    #d4d4d8 calc(var(--page-h, 297mm) - 1px),
+    #d4d4d8 var(--page-h, 297mm)
+  );
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.18),
+    0 6px 18px rgba(0, 0, 0, 0.12);
+  color: #000000;
+  cursor: text;
+}
+
+.word-view .ProseMirror {
+  font-family: Calibri, Carlito, Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.3;
+  color: #000000;
+  min-height: var(--page-body-h, calc(297mm - 50.8mm));
+  tab-size: 36pt;
+  outline: none;
+  caret-color: #000000;
+  -webkit-font-smoothing: auto;
+}
+
+/* The app rings every focused control; on the page it would frame the text. */
+.word-view .ProseMirror:focus-visible {
+  box-shadow: none;
+}
+
+.word-view .ProseMirror ::selection {
+  background: rgba(20, 115, 230, 0.28);
+}
+
+.word-view .ProseMirror p {
+  margin: 0 0 8pt;
+}
+
+.word-view .ProseMirror h1,
+.word-view .ProseMirror h2,
+.word-view .ProseMirror h3,
+.word-view .ProseMirror h4,
+.word-view .ProseMirror h5,
+.word-view .ProseMirror h6 {
+  font-family: "Calibri Light", Calibri, Carlito, Arial, sans-serif;
+  font-weight: normal;
+  line-height: 1.2;
+  margin: 12pt 0 4pt;
+}
+
+.word-view .ProseMirror h1 {
+  font-size: 16pt;
+  color: #2f5496;
+}
+
+.word-view .ProseMirror h1.doc-title {
+  font-size: 28pt;
+  color: #000000;
+  margin: 0 0 4pt;
+}
+
+.word-view .ProseMirror h2 {
+  font-size: 13pt;
+  color: #2f5496;
+  margin-top: 8pt;
+}
+
+.word-view .ProseMirror h3 {
+  font-size: 12pt;
+  color: #1f3763;
+  margin-top: 8pt;
+}
+
+.word-view .ProseMirror h4,
+.word-view .ProseMirror h5 {
+  font-size: 11pt;
+  font-style: italic;
+  color: #2f5496;
+  margin-top: 8pt;
+}
+
+.word-view .ProseMirror h6 {
+  font-size: 11pt;
+  color: #1f3763;
+  margin-top: 8pt;
+}
+
+.word-view .ProseMirror > :first-child {
+  margin-top: 0;
+}
+
+.word-view .ProseMirror strong {
+  font-weight: bold;
+}
+
+.word-view .ProseMirror ul,
+.word-view .ProseMirror ol {
+  margin: 0 0 8pt;
+  padding-left: 24pt;
+}
+
+.word-view .ProseMirror ul {
+  list-style: disc;
+}
+
+.word-view .ProseMirror ul ul {
+  list-style: circle;
+}
+
+.word-view .ProseMirror ul ul ul {
+  list-style: square;
+}
+
+.word-view .ProseMirror ol {
+  list-style: decimal;
+}
+
+.word-view .ProseMirror ol ol {
+  list-style: lower-alpha;
+}
+
+.word-view .ProseMirror ol ol ol {
+  list-style: lower-roman;
+}
+
+.word-view .ProseMirror li p,
+.word-view .ProseMirror li ul,
+.word-view .ProseMirror li ol {
+  margin: 0;
+}
+
+.word-view .ProseMirror a {
+  color: #0563c1;
+  text-decoration: underline;
+  cursor: text;
+}
+
+.word-view .ProseMirror mark {
+  color: inherit;
+  background-color: #ffff00;
+}
+
+.word-view .ProseMirror blockquote {
+  margin: 0 0 8pt 36pt;
+  padding-left: 8pt;
+  border-left: 2px solid #bfbfbf;
+}
+
+.word-view .ProseMirror pre {
+  font-family: "Courier New", "Liberation Mono", monospace;
+  font-size: 10pt;
+  background: #f2f2f2;
+  padding: 6pt;
+  margin: 0 0 8pt;
+  white-space: pre-wrap;
+}
+
+.word-view .ProseMirror code {
+  font-family: "Courier New", "Liberation Mono", monospace;
+}
+
+.word-view .ProseMirror hr {
+  border: 0;
+  border-top: 1px solid #a6a6a6;
+  margin: 6pt 0;
+}
+
+/* Tables ----------------------------------------------------------------- */
+/* Tables wider than the text column run into the margin, as in Word, and the
+   outer half of their collapsed borders stays visible. */
+.word-view .ProseMirror .tableWrapper {
+  overflow: visible;
+  margin: 0;
+}
+
+.word-view .ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+
+.word-view .ProseMirror td,
+.word-view .ProseMirror th {
+  position: relative;
+  border: 1px solid #8c8c8c;
+  padding: 1pt 5.4pt;
+  vertical-align: top;
+  text-align: left;
+  min-width: 2em;
+  box-sizing: border-box;
+}
+
+.word-view .ProseMirror th {
+  background: #f2f2f2;
+  font-weight: bold;
+}
+
+.word-view .ProseMirror td p,
+.word-view .ProseMirror th p {
+  margin: 0;
+}
+
+.word-view .ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 115, 230, 0.16);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.word-view .ProseMirror .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: #1473e6;
+  pointer-events: none;
+}
+
+.word-view .ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Images ----------------------------------------------------------------- */
+.word-view .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+.word-view .ProseMirror [data-resize-container] {
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+/* Let an oversized picture shrink to the page instead of overflowing it. */
+.word-view .ProseMirror [data-resize-wrapper] {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.word-view .ProseMirror [data-resize-handle] {
+  width: 9px;
+  height: 9px;
+  background: #ffffff;
+  border: 1.5px solid #1473e6;
+  border-radius: 1px;
+  opacity: 0;
+  z-index: 3;
+}
+
+.word-view .ProseMirror [data-resize-handle="top-left"],
+.word-view .ProseMirror [data-resize-handle="bottom-right"] {
+  cursor: nwse-resize;
+}
+
+.word-view .ProseMirror [data-resize-handle="top-right"],
+.word-view .ProseMirror [data-resize-handle="bottom-left"] {
+  cursor: nesw-resize;
+}
+
+.word-view .ProseMirror [data-resize-handle="top-left"],
+.word-view .ProseMirror [data-resize-handle="top-right"] {
+  margin-top: -5px;
+}
+
+.word-view .ProseMirror [data-resize-handle="bottom-left"],
+.word-view .ProseMirror [data-resize-handle="bottom-right"] {
+  margin-bottom: -5px;
+}
+
+.word-view .ProseMirror [data-resize-handle$="left"] {
+  margin-left: -5px;
+}
+
+.word-view .ProseMirror [data-resize-handle$="right"] {
+  margin-right: -5px;
+}
+
+.word-view .ProseMirror [data-resize-container]:hover [data-resize-handle],
+.word-view .ProseMirror .ProseMirror-selectednode [data-resize-handle],
+.word-view .ProseMirror [data-resize-state="true"] [data-resize-handle] {
+  opacity: 1;
+}
+
+.word-view .ProseMirror .ProseMirror-selectednode img,
+.word-view .ProseMirror img.ProseMirror-selectednode {
+  outline: 1.5px solid #1473e6;
+}

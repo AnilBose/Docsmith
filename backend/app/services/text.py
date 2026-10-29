@@ -209,7 +209,8 @@ def serialize_layout(session: DocumentSession, pno: int) -> dict:
     spans_out = []
     for span in index.span_list():
         bold, italic = fontsvc.guess_style(span.font, span.flags)
-        record = library.record_for(span.font)
+        face = library.variant(span.font, bold=bold, italic=italic)
+        record = library.record_for(face)
         spans_out.append(
             {
                 "id": span.span_id,
@@ -220,7 +221,7 @@ def serialize_layout(session: DocumentSession, pno: int) -> dict:
                 "origin": list(span.origin),
                 "font": span.font,
                 "fontFamily": fontsvc.strip_subset_tag(span.font),
-                "fontId": fontsvc.css_family_for(span.font),
+                "fontId": fontsvc.css_family_for(face),
                 "size": round(span.size, 3),
                 "color": rgb_to_hex(span.color),
                 "bold": bold,
@@ -314,7 +315,9 @@ def build_css(style: TextStyle, library: fontsvc.FontLibrary, line_box_px: float
         decorations.append("line-through")
 
     rules = [
-        "font-family: {0};".format(library.font_stack(style.font)),
+        "font-family: {0};".format(
+            library.font_stack(library.variant(style.font, bold=style.bold, italic=style.italic))
+        ),
         "font-size: {0:.4f}px;".format(style.size),
         "color: {0};".format(style.color or "#000000"),
         "font-weight: {0};".format("bold" if style.bold else "normal"),

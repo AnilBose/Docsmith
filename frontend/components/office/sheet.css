@@ -1,0 +1,56 @@
+/*
+ * Fortune-sheet was styled against browser defaults, but Tailwind's preflight
+ * resets borders, box sizing, form controls and inline SVGs everywhere. These
+ * rules roll those resets back inside the grid only. They use :where() so
+ * their specificity stays at or below preflight's, and every Fortune-sheet
+ * class rule still wins over them.
+ */
+.sheet-host {
+  color: #000;
+  color-scheme: light;
+  background: #fff;
+  font-size: 14px;
+  line-height: normal;
+  -webkit-font-smoothing: auto;
+}
+
+:where(.sheet-host) *,
+:where(.sheet-host) ::before,
+:where(.sheet-host) ::after {
+  box-sizing: revert;
+  border-width: revert;
+  border-style: revert;
+  border-color: revert;
+}
+
+:where(.sheet-host) :is(img, svg, video, canvas) {
+  display: revert;
+  vertical-align: revert;
+}
+
+:where(.sheet-host) :is(img, video) {
+  max-width: revert;
+  height: revert;
+}
+
+:where(.sheet-host) :is(button, input, select, textarea) {
+  margin: revert;
+  padding: revert;
+  line-height: revert;
+  color: revert;
+  background-color: revert;
+  background-image: revert;
+}
+
+:where(.sheet-host) :is(h1, h2, h3, h4, h5, h6, p, ul, ol, hr, blockquote, dl, dd, figure, pre) {
+  margin: revert;
+  padding: revert;
+  font-size: revert;
+  font-weight: revert;
+  list-style: revert;
+}
+
+/* The app's focus ring would outline Fortune-sheet's hidden cell input. */
+:where(.sheet-host) :focus-visible {
+  box-shadow: none;
+}

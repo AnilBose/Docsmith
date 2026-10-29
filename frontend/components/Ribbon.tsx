@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { api } from "@/lib/api";
+import { useOffice } from "@/lib/office";
 import { useEditor } from "@/lib/store";
 import type { ToolMode } from "@/lib/types";
 import { Icon } from "./Icons";
@@ -466,6 +467,12 @@ export default function Ribbon() {
       doc && void run(`Exporting ${format}`, () =>
         api.exportAs(doc.id, format, doc.filename.replace(/\.pdf$/i, "")),
       );
+    // Word, Excel and CSV land in their own editors, ready to edit and save.
+    const openAs = (format: "docx" | "xlsx" | "csv") =>
+      doc && void run(`Converting to ${format === "docx" ? "Word" : format === "xlsx" ? "Excel" : "CSV"}`, async () => {
+        const bytes = await api.exportBytes(doc.id, format);
+        useOffice.getState().open(`${doc.filename.replace(/\.pdf$/i, "")}.${format}`, bytes);
+      });
     return (
       <>
         <Group title="To PDF">
@@ -476,15 +483,15 @@ export default function Ribbon() {
           />
         </Group>
         <Group title="Office">
-          <Cmd icon={<Icon.Export size={20} />} label="Word" disabled={!has} onClick={() => exportAs("docx")} />
-          <Cmd icon={<Icon.Export size={20} />} label="Excel" disabled={!has} onClick={() => exportAs("xlsx")} />
+          <Cmd icon={<Icon.Export size={20} />} label="Word" disabled={!has} onClick={() => openAs("docx")} />
+          <Cmd icon={<Icon.Export size={20} />} label="Excel" disabled={!has} onClick={() => openAs("xlsx")} />
           <Cmd icon={<Icon.Export size={20} />} label="PowerPoint" disabled={!has} onClick={() => exportAs("pptx")} />
         </Group>
         <Group title="Other">
           <Cmd icon={<Icon.Image size={20} />} label="Images" disabled={!has} onClick={() => exportAs("png")} />
           <Cmd icon={<Icon.Export size={20} />} label="Text" disabled={!has} onClick={() => exportAs("txt")} />
           <Cmd icon={<Icon.Export size={20} />} label="HTML" disabled={!has} onClick={() => exportAs("html")} />
-          <Cmd icon={<Icon.Export size={20} />} label="CSV" disabled={!has} onClick={() => exportAs("csv")} />
+          <Cmd icon={<Icon.Export size={20} />} label="CSV" disabled={!has} onClick={() => openAs("csv")} />
         </Group>
       </>
     );

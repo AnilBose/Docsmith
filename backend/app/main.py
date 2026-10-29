@@ -1,4 +1,4 @@
-"""Local PDF editor API.
+"""Docsmith API: the PDF editing and conversion service.
 
 Runs on the loopback interface only. No document ever leaves this process
 except through an explicit download, and no request is ever made to the
@@ -20,10 +20,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-7s  %(name)s  %(message)s",
 )
-log = logging.getLogger("pdf-editor")
+log = logging.getLogger("docsmith")
 
 app = FastAPI(
-    title="Local PDF Editor",
+    title="Docsmith",
     version="1.0.0",
     description=(
         "Offline PDF editing: lossless text and image editing, page assembly, "
@@ -103,7 +103,7 @@ def health():
 
 @app.on_event("startup")
 def on_startup():
-    log.info("PDF editor API on http://%s:%s", settings.host, settings.port)
+    log.info("Docsmith API on http://%s:%s", settings.host, settings.port)
     log.info("Allowed origins: %s", ", ".join(settings.allowed_origins))
     from app.services.convert import capabilities
 

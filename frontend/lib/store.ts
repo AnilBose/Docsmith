@@ -14,6 +14,7 @@ import type {
   SearchMatch,
   SpellIssue,
   TextEdit,
+  TextRun,
   ToolMode,
   ViewMode,
   ZoomMode,
@@ -103,6 +104,13 @@ interface EditorState {
   invalidate: () => void;
 
   applyEdits: (edits: TextEdit[]) => Promise<void>;
+  editParagraph: (
+    page: number,
+    paragraphId: string,
+    items: TextRun[][],
+    version?: number,
+    lift?: number,
+  ) => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
 
@@ -366,6 +374,21 @@ export const useEditor = create<EditorState>((set, get) => ({
       get().setDocument(result.document);
       get().notify("success", `Applied ${result.applied} change${result.applied === 1 ? "" : "s"}`);
       await get().loadLayout(get().currentPage, true);
+    });
+  },
+
+  editParagraph: async (page, paragraphId, items, version, lift = 0) => {
+    const { doc } = get();
+    if (!doc) return;
+    await get().run("Reflowing text", async () => {
+      const result = await api.editParagraph(doc.id, { page, paragraphId, items, version, lift });
+      get().setDocument(result.document);
+      if (result.warnings.length) {
+        result.warnings.forEach((warning) => get().notify("info", warning));
+      } else {
+        get().notify("success", "Paragraph updated");
+      }
+      await get().loadLayout(page, true);
     });
   },
 

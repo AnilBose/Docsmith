@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PDF Editor",
-  description: "A local, offline PDF editor.",
+  title: "Docsmith",
+  description: "A local, offline editor for PDF, Word, Excel and CSV documents.",
 };
 
 export const viewport: Viewport = {

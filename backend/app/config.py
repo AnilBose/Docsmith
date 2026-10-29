@@ -44,7 +44,7 @@ class Settings:
     strip_active_content: bool = _env_bool("PDFE_STRIP_ACTIVE_CONTENT", True)
 
     # Scratch space used only by converters that shell out (LibreOffice).
-    scratch_dir: Path = Path(os.getenv("PDFE_SCRATCH", tempfile.gettempdir())) / "pdf-editor"
+    scratch_dir: Path = Path(os.getenv("PDFE_SCRATCH", tempfile.gettempdir())) / "docsmith"
 
     # --- external binaries ------------------------------------------------
     @property

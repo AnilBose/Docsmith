@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor } from "@/lib/store";
-import type { PageLayout, TextSpan } from "@/lib/types";
+import type { PageLayout, Paragraph, TextSpan } from "@/lib/types";
+import ParagraphEditor from "./ParagraphEditor";
 
 interface Props {
   page: number;
@@ -13,20 +14,23 @@ interface Props {
 /**
  * The editable text overlay.
  *
- * Each run of text from the PDF becomes an absolutely-positioned box sitting
- * exactly on top of the glyphs the canvas already painted. The boxes are
- * transparent, so what the user sees is the real rendered page; they only
- * become opaque while a run is actually being edited. Committing an edit sends
- * the new string plus its styling to the backend, which rewrites just those
- * glyphs in the PDF.
+ * Text is edited a paragraph at a time, as in a word processor: each
+ * paragraph the server recognised gets a transparent hit box over the glyphs
+ * the canvas already painted. Click selects it (the properties panel then
+ * styles it); double-click opens it as rich text, and applying the edit
+ * reflows the content after it. Runs that belong to no paragraph (stray
+ * glyphs, vertical text) keep the single-run editor.
  */
 export default function TextLayer({ page, layout, scale }: Props) {
+  const doc = useEditor((s) => s.doc);
   const tool = useEditor((s) => s.tool);
   const selectedSpanIds = useEditor((s) => s.selectedSpanIds);
   const selectSpans = useEditor((s) => s.selectSpans);
   const applyEdits = useEditor((s) => s.applyEdits);
+  const editParagraph = useEditor((s) => s.editParagraph);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingParagraph, setEditingParagraph] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLDivElement>(null);
 
@@ -36,9 +40,13 @@ export default function TextLayer({ page, layout, scale }: Props) {
   useEffect(() => {
     if (!active) {
       setEditingId(null);
+      setEditingParagraph(null);
       setDraft("");
     }
   }, [active]);
+
+  // A new layout (after any edit) invalidates paragraph ids.
+  useEffect(() => setEditingParagraph(null), [layout?.version]);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -52,7 +60,14 @@ export default function TextLayer({ page, layout, scale }: Props) {
     }
   }, [editingId]);
 
+  const paragraphs = layout?.paragraphs ?? [];
   const spans = layout?.spans ?? [];
+  const inParagraph = useMemo(() => new Set(paragraphs.flatMap((p) => p.spanIds)), [paragraphs]);
+  const looseSpans = spans.filter((span) => !inParagraph.has(span.id));
+  const embeddedFonts = useMemo(
+    () => new Set(spans.filter((span) => span.embeddable).map((span) => span.fontId)),
+    [spans],
+  );
 
   const styleFor = useMemo(
     () => (span: TextSpan) => {
@@ -92,11 +107,53 @@ export default function TextLayer({ page, layout, scale }: Props) {
     ]);
   }
 
+  function paragraphSelected(paragraph: Paragraph) {
+    return paragraph.spanIds.length > 0 && paragraph.spanIds.every((id) => selectedSpanIds.includes(id));
+  }
+
   if (!active || !layout) return null;
 
   return (
     <div className="absolute inset-0" data-layer="text">
-      {spans.map((span) => {
+      {paragraphs.map((paragraph) => {
+        if (editingParagraph === paragraph.id && doc) {
+          return (
+            <ParagraphEditor
+              key={paragraph.id}
+              docId={doc.id}
+              paragraph={paragraph}
+              background={layout.background ?? "#ffffff"}
+              scale={scale}
+              embeddedFonts={embeddedFonts}
+              onCancel={() => setEditingParagraph(null)}
+              onCommit={(items, lift) => {
+                setEditingParagraph(null);
+                void editParagraph(page, paragraph.id, items, layout.version, lift);
+              }}
+            />
+          );
+        }
+        const [x0, y0, x1, y1] = paragraph.bbox;
+        return (
+          <div
+            key={paragraph.id}
+            className={`para-box ${paragraphSelected(paragraph) ? "is-selected" : ""}`}
+            style={{ left: x0 * scale - 2, top: y0 * scale - 1, width: (x1 - x0) * scale + 4, height: (y1 - y0) * scale + 2 }}
+            title="Double-click to edit this paragraph"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+              selectSpans(paragraph.spanIds, event.shiftKey || event.ctrlKey || event.metaKey);
+            }}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              setEditingId(null);
+              setEditingParagraph(paragraph.id);
+            }}
+          />
+        );
+      })}
+
+      {looseSpans.map((span) => {
         const isEditing = editingId === span.id;
         const isSelected = selectedSpanIds.includes(span.id);
         const base = styleFor(span);
