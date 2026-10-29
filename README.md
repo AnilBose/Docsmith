@@ -9,7 +9,7 @@ familiar Word and Excel-style editors. Everything runs on your machine, so your
 documents never leave it.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
-![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)
+![Node](https://img.shields.io/badge/node-20.9%2B-339933?logo=node.js&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-frontend-000000?logo=next.js&logoColor=white)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
@@ -109,7 +109,7 @@ matching editor.
 | Component | Needed for | Notes |
 |---|---|---|
 | Python 3.11+ | everything | 3.13 tested |
-| Node.js 18+ | the interface | 20 tested |
+| Node.js 20.9+ | the interface | 20 tested |
 | LibreOffice | PowerPoint, `.doc`, `.xls`, `.odt` → PDF | Optional. Install it from [libreoffice.org](https://www.libreoffice.org/), or set `PDFE_SOFFICE` to the path of the `soffice` binary. |
 
 The Word and spreadsheet editors, and conversion between them and PDF, work
