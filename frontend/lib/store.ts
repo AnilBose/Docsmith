@@ -482,9 +482,12 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   stageRedactions: async (ids) => {
-    const { doc, redactionFindings } = get();
+    const { doc, redactionFindings, stagedRedactions } = get();
     if (!doc) return;
-    const chosen = redactionFindings.filter((f) => ids.includes(f.id));
+    // Items already marked keep their mark; marking them again would stack duplicates.
+    const chosen = redactionFindings.filter(
+      (f) => ids.includes(f.id) && !stagedRedactions.includes(f.id),
+    );
     if (!chosen.length) return;
     await get().run("Marking for redaction", async () => {
       const result = await api.markRedactions(
@@ -492,7 +495,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         chosen.map((f) => ({ page: f.page, rects: f.rects })),
       );
       get().setDocument(result.document);
-      set({ stagedRedactions: ids });
+      set({ stagedRedactions: Array.from(new Set([...stagedRedactions, ...ids])) });
       get().notify("info", `${result.marked} area(s) marked. Apply to remove permanently.`);
     });
   },
@@ -502,6 +505,16 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (!doc) return;
     await get().run("Applying redactions", async () => {
       const result = await api.applyRedactions(doc.id);
+      if (!result.applied) {
+        // Keep the findings so the user can mark them and try again.
+        get().notify(
+          "warn",
+          redactionFindings.length
+            ? "Nothing is marked yet. Click the items to remove in the Redact list (or Mark all), then apply."
+            : "Nothing is marked yet. Scan, search, or use Mark Area first, then apply.",
+        );
+        return;
+      }
       get().setDocument(result.document);
 
       // Prove the content is really gone rather than merely covered.

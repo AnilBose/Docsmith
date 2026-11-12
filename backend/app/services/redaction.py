@@ -27,7 +27,10 @@ PATTERNS: dict[str, dict] = {
     },
     "phone": {
         "label": "Phone numbers",
-        "regex": r"(?:\+?\d{1,3}[\s.\-]?)?(?:\(\d{2,4}\)[\s.\-]?)?\d{3,4}[\s.\-]?\d{3,4}(?:[\s.\-]?\d{2,4})?",
+        # Country code, area code, then up to five digit groups, so that the
+        # whole number goes: "+91 98765 43210", "(080) 2345 6789", "415.555.0134".
+        "regex": r"(?<![\w+.])(?:\+\d{1,3}[ .\-]?)?(?:\(\d{1,5}\)[ .\-]?)?\d{2,5}(?:[ .\-]?\d{2,5}){1,4}(?!\w)",
+        "validator": "phone",
     },
     "ssn": {
         "label": "US Social Security numbers",
@@ -71,7 +74,19 @@ def _luhn(value: str) -> bool:
     return checksum % 10 == 0
 
 
-_VALIDATORS = {"luhn": _luhn}
+_NOT_PHONE = re.compile(
+    r"^(?:\d{1,4}[-./]\d{1,2}[-./]\d{2,4}"  # dates
+    r"|\d+\.\d+"                            # decimals
+    r"|(?:\d{1,3}\.){3}\d{1,3})$"           # IP addresses
+)
+
+
+def _phone(value: str) -> bool:
+    digits = sum(c.isdigit() for c in value)
+    return 7 <= digits <= 15 and not _NOT_PHONE.match(value)
+
+
+_VALIDATORS = {"luhn": _luhn, "phone": _phone}
 
 
 @dataclass
@@ -253,15 +268,20 @@ def apply(
     deleted -- that is the whole point.
     """
     with session.lock:
-        session.checkpoint()
         targets = list(pages) if pages is not None else list(range(session.doc.page_count))
-        applied = 0
+        pending = {}
         for pno in targets:
-            page = _page(session, pno)
-            pending = list(page.annots(types=[fitz.PDF_ANNOT_REDACT]) or [])
-            if not pending:
-                continue
-            applied += len(pending)
+            count = len(list(_page(session, pno).annots(types=[fitz.PDF_ANNOT_REDACT]) or []))
+            if count:
+                pending[pno] = count
+        # Nothing marked: leave the file, its metadata and the undo history alone.
+        if not pending:
+            return {"applied": 0, "permanent": False}
+
+        session.checkpoint()
+        applied = sum(pending.values())
+        for pno in pending:
+            page = session.doc[pno]
             page.apply_redactions(
                 images=(
                     getattr(fitz, "PDF_REDACT_IMAGE_REMOVE", 2)

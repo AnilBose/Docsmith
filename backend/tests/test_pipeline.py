@@ -282,9 +282,18 @@ def main() -> int:
           any("jane.doe@example.com" in f["text"] for f in findings),
           str([f["text"] for f in findings]))
 
+    unmarked = redsvc.apply(red)
+    check("apply with nothing marked removes nothing",
+          unmarked["applied"] == 0 and "jane.doe@example.com" in red.doc[0].get_text("text"),
+          str(unmarked))
+
+    phones = [f["text"] for f in redsvc.detect(red, ["phone"])]
+    check("whole phone number detected", "+1 415 555 0134" in phones, str(phones))
+
     redsvc.mark(red, findings)
     check("marks staged", len(redsvc.list_marks(red)) == len(findings))
-    redsvc.apply(red)
+    result = redsvc.apply(red)
+    check("apply reports the marked areas", result["applied"] == len(findings), str(result))
     check("marks consumed", len(redsvc.list_marks(red)) == 0)
 
     remaining = red.doc[0].get_text("text")

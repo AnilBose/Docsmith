@@ -561,6 +561,11 @@ function RedactPanel() {
               Mark all
             </button>
           </div>
+          <p className="mb-1.5 text-[10px] text-chrome-500">
+            {staged.length
+              ? `${staged.length} of ${findings.length} marked.`
+              : "Click an item to mark it for removal."}
+          </p>
           <ul className="max-h-56 space-y-1 overflow-y-auto">
             {findings.map((finding) => (
               <li key={finding.id}>
